@@ -10,12 +10,15 @@ from sklearn.linear_model import LogisticRegression
 # ----------------------------
 @st.cache_data
 def load_and_train_model():
-    st.write("Kolom tersedia:", df.columns.tolist())
-    df = pd.read_csv("cekfakta_kompas.csv")
-    df = df.dropna(subset=["isi", "kategori_klarifikasi"])  
+    url = "https://raw.githubusercontent.com/namauser/nama-repo/main/cekfakta_kompas.csv"
+    df = pd.read_csv(url)
 
-    X = df["isi"]
-    y = df["kategori_klarifikasi"]
+    st.write("Kolom tersedia:", df.columns.tolist()) 
+
+    df = df.dropna(subset=["klaim", "klasifikasi"])  
+    X = df["klaim"]
+    y = df["klasifikasi"]
+
 
     X_train, _, y_train, _ = train_test_split(X, y, test_size=0.2, random_state=42)
 
