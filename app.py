@@ -24,6 +24,5 @@ if st.button("🔍 Prediksi"):
         st.success(f"Hasil Prediksi: **{prediction.upper()}**")
         if prediction.lower() == "hoaks":
             st.error("⚠️ Berita ini terdeteksi sebagai HOAKS.")
-        else:
-            hasil = "Fakta"
+        else: prediction.lower() == "fakta":
             st.info("✅ Berita ini terdeteksi sebagai FAKTA.")
