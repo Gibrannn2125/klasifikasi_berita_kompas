@@ -1,44 +1,69 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
+from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.pipeline import Pipeline
 from sklearn.utils import resample
 
-# --- SETTINGS ---
-DATA_URL = "https://raw.githubusercontent.com/Gibrannn2125/klasifikasi_berita_kompas/refs/heads/main/cekfakta_kompas.csv"  
+# Set judul halaman
+st.set_page_config(page_title="Klasifikasi Berita Hoaks", layout="wide")
 
-# --- TITLE ---
-st.title("📰 Klasifikasi Berita Kompas - HOAKS atau FAKTA")
+# Tampilan header
+st.markdown("""
+    <style>
+    .title {
+        font-size: 32px;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 1rem;
+    }
+    .result-hoax {
+        background-color: #ffe6e6;
+        color: #c62828;
+        padding: 1rem;
+        border-radius: 10px;
+        font-size: 18px;
+        margin-top: 20px;
+    }
+    .result-fakta {
+        background-color: #e8f5e9;
+        color: #2e7d32;
+        padding: 1rem;
+        border-radius: 10px;
+        font-size: 18px;
+        margin-top: 20px;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# --- LOAD & CLEAN DATA ---
+st.markdown('<div class="title">📢 Klasifikasi Berita Hoaks - Kompas</div>', unsafe_allow_html=True)
+
+# Muat data dari file CSV lokal
 @st.cache_data
 def load_and_train_model():
-    df = pd.read_csv(DATA_URL)
-    df = df.dropna(subset=['isi', 'kategori_klarifikasi'])
+    df = pd.read_csv("cekfakta_kompas.csv")
 
-    # Standarisasi label
-    df['kategori_klarifikasi'] = df['kategori_klarifikasi'].str.strip().str.upper()
+    # Tampilkan kolom untuk debugging jika perlu
+    # st.write("Kolom tersedia:", df.columns.tolist())
 
-    # Tampilkan jumlah label
-    label_counts = df['kategori_klarifikasi'].value_counts()
-    st.sidebar.markdown("### Distribusi Label")
-    st.sidebar.write(label_counts)
+    # Ubah kolom sesuai isi dataset
+    # Misal: klaim = 'klaim', label = 'klasifikasi'
+    df = df.dropna(subset=['klaim', 'klasifikasi'])
+    df['klasifikasi'] = df['klasifikasi'].str.strip().str.upper()
 
-    # Penyeimbangan data
-    if 'HOAKS' in df['kategori_klarifikasi'].unique() and 'FAKTA' in df['kategori_klarifikasi'].unique():
-        hoaks = df[df['kategori_klarifikasi'] == 'HOAKS']
-        fakta = df[df['kategori_klarifikasi'] == 'FAKTA']
-        min_len = min(len(hoaks), len(fakta))
-        df_balanced = pd.concat([
-            resample(hoaks, replace=False, n_samples=min_len, random_state=42),
-            resample(fakta, replace=False, n_samples=min_len, random_state=42)
-        ])
-    else:
-        df_balanced = df.copy()
+    # Seimbangkan jumlah hoaks dan fakta
+    hoaks = df[df['klasifikasi'] == 'HOAKS']
+    fakta = df[df['klasifikasi'] == 'FAKTA']
+    min_len = min(len(hoaks), len(fakta))
 
-    X = df_balanced['isi']
-    y = df_balanced['kategori_klarifikasi']
+    df_balanced = pd.concat([
+        resample(hoaks, replace=False, n_samples=min_len, random_state=42),
+        resample(fakta, replace=False, n_samples=min_len, random_state=42)
+    ])
+
+    X = df_balanced['klaim']
+    y = df_balanced['klasifikasi']
 
     # Pipeline model
     model = Pipeline([
@@ -46,22 +71,22 @@ def load_and_train_model():
         ('clf', MultinomialNB())
     ])
     model.fit(X, y)
+
     return model
 
 model = load_and_train_model()
 
-# --- FORM INPUT ---
-st.markdown("### Masukkan teks berita atau klaim:")
-user_input = st.text_area("Teks Berita/Klaim")
+# Input pengguna
+st.subheader("Masukkan teks berita atau klaim yang ingin dicek:")
+user_input = st.text_area("Teks Berita/Klaim", height=150)
 
-if st.button("🔍 Cek Kebenaran"):
+if st.button("🔍 Cek Kategori"):
     if user_input.strip() == "":
         st.warning("Silakan masukkan teks terlebih dahulu.")
     else:
         prediction = model.predict([user_input])[0]
-        if prediction == "HOAKS":
-            st.error("❌ Kategori Prediksi: HOAKS")
-        elif prediction == "FAKTA":
-            st.success("✅ Kategori Prediksi: FAKTA")
+
+        if prediction == 'HOAKS':
+            st.markdown(f'<div class="result-hoax">🚨 Prediksi: <strong>{prediction}</strong></div>', unsafe_allow_html=True)
         else:
-            st.info(f"Kategori tidak dikenal: {prediction}")
+            st.markdown(f'<div class="result-fakta">✅ Prediksi: <strong>{prediction}</strong></div>', unsafe_allow_html=True)
