@@ -6,7 +6,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.utils import resample
 
 # --- SETTINGS ---
-DATA_URL = "https://raw.githubusercontent.com/username/repo/main/cekfakta_kompas.csv"  # Ganti dengan URL CSV kamu
+DATA_URL = "https://raw.githubusercontent.com/Gibrannn2125/klasifikasi_berita_kompas/refs/heads/main/cekfakta_kompas.csv"  
 
 # --- TITLE ---
 st.title("📰 Klasifikasi Berita Kompas - HOAKS atau FAKTA")
