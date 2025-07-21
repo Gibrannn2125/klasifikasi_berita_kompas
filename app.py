@@ -23,7 +23,7 @@ text_input = st.text_area("📝 Teks Berita/Klaim")
 @st.cache_resource
 def load_model():
     # Ganti URL ini dengan URL raw CSV-mu dari GitHub
-    url = "https://raw.githubusercontent.com/username/repo/main/cekfakta_kompas.csv"
+    url = "https://raw.githubusercontent.com/Gibrannn2125/klasifikasi_berita_kompas/refs/heads/main/cekfakta_kompas.csv"
     df = pd.read_csv(url)
     df = df.dropna(subset=["text", "categories"])
     X = df["text"]
