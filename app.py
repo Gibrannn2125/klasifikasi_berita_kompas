@@ -10,8 +10,9 @@ from sklearn.linear_model import LogisticRegression
 # ----------------------------
 @st.cache_data
 def load_and_train_model():
+    st.write("Kolom tersedia:", df.columns.tolist())
     df = pd.read_csv("cekfakta_kompas.csv")
-    df = df.dropna(subset=["isi", "kategori_klarifikasi"])  # pastikan kolom benar
+    df = df.dropna(subset=["isi", "kategori_klarifikasi"])  
 
     X = df["isi"]
     y = df["kategori_klarifikasi"]
