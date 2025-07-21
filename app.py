@@ -22,7 +22,9 @@ if st.button("🔍 Prediksi"):
         data = pd.Series([input_text])
         prediction = model.predict(data)[0]
         st.success(f"Hasil Prediksi: **{prediction.upper()}**")
-        if prediction.lower() == "hoaks":
-            st.error("⚠️ Berita ini terdeteksi sebagai HOAKS.")
-        else prediction.lower() == "fakta":
-            st.info("✅ Berita ini terdeteksi sebagai FAKTA.")
+    if prediction == "hoaks":
+        st.error("⚠️ Berita ini terdeteksi sebagai: **HOAKS**")
+    elif prediction == "fakta":
+        st.info("✅ Berita ini terdeteksi sebagai: **FAKTA**")
+    else:
+        st.warning(f"Hasil tidak dikenali: {prediction}")
