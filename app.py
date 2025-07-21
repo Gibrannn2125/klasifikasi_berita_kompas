@@ -1,36 +1,48 @@
-
 import streamlit as st
-import pickle
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.ensemble import RandomForestClassifier
 
-# Styling CSS
+# CSS styling
 st.markdown("""
     <style>
-    .main { background-color: #f8f9fa; padding: 2rem; border-radius: 10px; }
+    .main { background-color: #f9f9f9; padding: 2rem; border-radius: 10px; }
     .title { font-size: 28px; font-weight: bold; color: #2c3e50; }
-    .hoax { background-color: #ffe6e6; color: #c0392b; padding: 1rem; border-left: 6px solid #e74c3c; border-radius: 5px; }
-    .fakta { background-color: #e6f4ea; color: #27ae60; padding: 1rem; border-left: 6px solid #2ecc71; border-radius: 5px; }
+    .hoax { background-color: #ffe6e6; color: #c0392b; padding: 1rem; border-left: 6px solid #e74c3c; border-radius: 5px; margin-top: 1rem; }
+    .fakta { background-color: #e6f4ea; color: #27ae60; padding: 1rem; border-left: 6px solid #2ecc71; border-radius: 5px; margin-top: 1rem; }
     </style>
 """, unsafe_allow_html=True)
 
-# Header
 st.markdown('<div class="main">', unsafe_allow_html=True)
 st.markdown('<div class="title">📢 Klasifikasi Berita Hoaks - Kompas</div>', unsafe_allow_html=True)
 st.write("Masukkan teks berita atau klaim yang ingin dicek:")
 
-# Input text
-text_input = st.text_area("Teks Berita/Klaim")
+text_input = st.text_area("📝 Teks Berita/Klaim")
 
-# Load model
-with open("model_berita.pkl", "rb") as f:
-    model = pickle.load(f)
+# Fungsi untuk melatih model
+@st.cache_resource
+def load_model():
+    # Ganti URL ini dengan URL raw CSV-mu dari GitHub
+    url = "https://raw.githubusercontent.com/username/repo/main/cekfakta_kompas.csv"
+    df = pd.read_csv(url)
+    df = df.dropna(subset=["text", "categories"])
+    X = df["text"]
+    y = df["categories"].str.lower()
+    vectorizer = TfidfVectorizer()
+    X_vec = vectorizer.fit_transform(X)
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model.fit(X_vec, y)
+    return model, vectorizer
 
-# Predict
+model, vectorizer = load_model()
+
 if st.button("🔍 Cek Fakta"):
-    if text_input.strip() == "":
+    if not text_input.strip():
         st.warning("Silakan masukkan teks terlebih dahulu.")
     else:
-        pred = model.predict([text_input])[0]
-        if pred.lower() == "hoaks":
+        input_vector = vectorizer.transform([text_input])
+        pred = model.predict(input_vector)[0]
+        if pred == "hoaks":
             st.markdown(f'<div class="hoax">🚫 Kategori Prediksi: <strong>{pred.upper()}</strong></div>', unsafe_allow_html=True)
         else:
             st.markdown(f'<div class="fakta">✅ Kategori Prediksi: <strong>{pred.upper()}</strong></div>', unsafe_allow_html=True)
