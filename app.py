@@ -1,50 +1,67 @@
 import streamlit as st
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.pipeline import Pipeline
+from sklearn.utils import resample
 
-# CSS styling
-st.markdown("""
-    <style>
-    .main { background-color: #f9f9f9; padding: 2rem; border-radius: 10px; }
-    .title { font-size: 28px; font-weight: bold; color: #2c3e50; }
-    .hoax { background-color: #ffe6e6; color: #c0392b; padding: 1rem; border-left: 6px solid #e74c3c; border-radius: 5px; margin-top: 1rem; }
-    .fakta { background-color: #e6f4ea; color: #27ae60; padding: 1rem; border-left: 6px solid #2ecc71; border-radius: 5px; margin-top: 1rem; }
-    </style>
-""", unsafe_allow_html=True)
+# --- SETTINGS ---
+DATA_URL = "https://raw.githubusercontent.com/username/repo/main/cekfakta_kompas.csv"  # Ganti dengan URL CSV kamu
 
-st.markdown('<div class="main">', unsafe_allow_html=True)
-st.markdown('<div class="title">📢 Klasifikasi Berita Hoaks - Kompas</div>', unsafe_allow_html=True)
-st.write("Masukkan teks berita atau klaim yang ingin dicek:")
+# --- TITLE ---
+st.title("📰 Klasifikasi Berita Kompas - HOAKS atau FAKTA")
 
-text_input = st.text_area("📝 Teks Berita/Klaim")
+# --- LOAD & CLEAN DATA ---
+@st.cache_data
+def load_and_train_model():
+    df = pd.read_csv(DATA_URL)
+    df = df.dropna(subset=['isi', 'kategori_klarifikasi'])
 
-# Fungsi untuk melatih model
-@st.cache_resource
-def load_model():
-    # Ganti URL ini dengan URL raw CSV-mu dari GitHub
-    url = "https://raw.githubusercontent.com/Gibrannn2125/klasifikasi_berita_kompas/refs/heads/main/cekfakta_kompas.csv"
-    df = pd.read_csv(url)
-    df = df.dropna(subset=["text", "categories"])
-    X = df["text"]
-    y = df["categories"].str.lower()
-    vectorizer = TfidfVectorizer()
-    X_vec = vectorizer.fit_transform(X)
-    model = RandomForestClassifier(n_estimators=100, random_state=42)
-    model.fit(X_vec, y)
-    return model, vectorizer
+    # Standarisasi label
+    df['kategori_klarifikasi'] = df['kategori_klarifikasi'].str.strip().str.upper()
 
-model, vectorizer = load_model()
+    # Tampilkan jumlah label
+    label_counts = df['kategori_klarifikasi'].value_counts()
+    st.sidebar.markdown("### Distribusi Label")
+    st.sidebar.write(label_counts)
 
-if st.button("🔍 Cek Fakta"):
-    if not text_input.strip():
+    # Penyeimbangan data
+    if 'HOAKS' in df['kategori_klarifikasi'].unique() and 'FAKTA' in df['kategori_klarifikasi'].unique():
+        hoaks = df[df['kategori_klarifikasi'] == 'HOAKS']
+        fakta = df[df['kategori_klarifikasi'] == 'FAKTA']
+        min_len = min(len(hoaks), len(fakta))
+        df_balanced = pd.concat([
+            resample(hoaks, replace=False, n_samples=min_len, random_state=42),
+            resample(fakta, replace=False, n_samples=min_len, random_state=42)
+        ])
+    else:
+        df_balanced = df.copy()
+
+    X = df_balanced['isi']
+    y = df_balanced['kategori_klarifikasi']
+
+    # Pipeline model
+    model = Pipeline([
+        ('tfidf', TfidfVectorizer()),
+        ('clf', MultinomialNB())
+    ])
+    model.fit(X, y)
+    return model
+
+model = load_and_train_model()
+
+# --- FORM INPUT ---
+st.markdown("### Masukkan teks berita atau klaim:")
+user_input = st.text_area("Teks Berita/Klaim")
+
+if st.button("🔍 Cek Kebenaran"):
+    if user_input.strip() == "":
         st.warning("Silakan masukkan teks terlebih dahulu.")
     else:
-        input_vector = vectorizer.transform([text_input])
-        pred = model.predict(input_vector)[0]
-        if pred == "hoaks":
-            st.markdown(f'<div class="hoax">🚫 Kategori Prediksi: <strong>{pred.upper()}</strong></div>', unsafe_allow_html=True)
+        prediction = model.predict([user_input])[0]
+        if prediction == "HOAKS":
+            st.error("❌ Kategori Prediksi: HOAKS")
+        elif prediction == "FAKTA":
+            st.success("✅ Kategori Prediksi: FAKTA")
         else:
-            st.markdown(f'<div class="fakta">✅ Kategori Prediksi: <strong>{pred.upper()}</strong></div>', unsafe_allow_html=True)
-
-st.markdown('</div>', unsafe_allow_html=True)
+            st.info(f"Kategori tidak dikenal: {prediction}")
