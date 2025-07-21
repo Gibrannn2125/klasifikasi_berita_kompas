@@ -8,7 +8,7 @@ with open("model_cekfakta.pkl", "rb") as f:
     model = pickle.load(f)
 
 st.set_page_config(page_title="Cek Fakta Hoaks", layout="centered")
-st.title("📰 Deteksi Hoaks dari Teks Berita")
+st.title("📰 Deteksi hoax dari berita kompas")
 st.write("Masukkan teks berita/artikel di bawah ini, lalu klik prediksi:")
 
 # Input teks
