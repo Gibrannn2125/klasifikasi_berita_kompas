@@ -1,92 +1,48 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.pipeline import Pipeline
+from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.utils import resample
+from sklearn.pipeline import Pipeline
 
-# Set judul halaman
-st.set_page_config(page_title="Klasifikasi Berita Hoaks", layout="wide")
+# ------------------ Title and Description ------------------ #
+st.set_page_config(page_title="Klasifikasi Berita Kompas", layout="centered")
+st.markdown("<h2 style='color:#004d99;'>📰 Klasifikasi Berita Kompas: Fakta atau Hoaks?</h2>", unsafe_allow_html=True)
+st.markdown("Masukkan teks berita atau klaim yang ingin dicek keasliannya.")
 
-# Tampilan header
-st.markdown("""
-    <style>
-    .title {
-        font-size: 32px;
-        font-weight: bold;
-        color: #333;
-        margin-bottom: 1rem;
-    }
-    .result-hoax {
-        background-color: #ffe6e6;
-        color: #c62828;
-        padding: 1rem;
-        border-radius: 10px;
-        font-size: 18px;
-        margin-top: 20px;
-    }
-    .result-fakta {
-        background-color: #e8f5e9;
-        color: #2e7d32;
-        padding: 1rem;
-        border-radius: 10px;
-        font-size: 18px;
-        margin-top: 20px;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-st.markdown('<div class="title">📢 Klasifikasi Berita Hoaks - Kompas</div>', unsafe_allow_html=True)
-
-# Muat data dari file CSV lokal
+# ------------------ Load & Train Model ------------------ #
 @st.cache_data
 def load_and_train_model():
     df = pd.read_csv("cekfakta_kompas.csv")
 
-    # Tampilkan kolom untuk debugging jika perlu
-    # st.write("Kolom tersedia:", df.columns.tolist())
+    # Pastikan kolom ada
+    df = df.dropna(subset=["text", "categories"])
 
-    # Ubah kolom sesuai isi dataset
-    # Misal: klaim = 'klaim', label = 'klasifikasi'
-    df = df.dropna(subset=['klaim', 'klasifikasi'])
-    df['klasifikasi'] = df['klasifikasi'].str.strip().str.upper()
+    X = df["text"]
+    y = df["categories"]
 
-    # Seimbangkan jumlah hoaks dan fakta
-    hoaks = df[df['klasifikasi'] == 'HOAKS']
-    fakta = df[df['klasifikasi'] == 'FAKTA']
-    min_len = min(len(hoaks), len(fakta))
+    X_train, _, y_train, _ = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    df_balanced = pd.concat([
-        resample(hoaks, replace=False, n_samples=min_len, random_state=42),
-        resample(fakta, replace=False, n_samples=min_len, random_state=42)
-    ])
-
-    X = df_balanced['klaim']
-    y = df_balanced['klasifikasi']
-
-    # Pipeline model
     model = Pipeline([
-        ('tfidf', TfidfVectorizer()),
-        ('clf', MultinomialNB())
+        ("tfidf", TfidfVectorizer(stop_words="indonesian")),
+        ("clf", MultinomialNB())
     ])
-    model.fit(X, y)
+    model.fit(X_train, y_train)
 
     return model
 
 model = load_and_train_model()
 
-# Input pengguna
-st.subheader("Masukkan teks berita atau klaim yang ingin dicek:")
-user_input = st.text_area("Teks Berita/Klaim", height=150)
+# ------------------ User Input ------------------ #
+user_input = st.text_area("📝 Teks Berita/Klaim", height=200)
 
-if st.button("🔍 Cek Kategori"):
+if st.button("🔍 Prediksi"):
     if user_input.strip() == "":
-        st.warning("Silakan masukkan teks terlebih dahulu.")
+        st.warning("Mohon masukkan teks berita untuk diprediksi.")
     else:
         prediction = model.predict([user_input])[0]
-
-        if prediction == 'HOAKS':
-            st.markdown(f'<div class="result-hoax">🚨 Prediksi: <strong>{prediction}</strong></div>', unsafe_allow_html=True)
+        if prediction.lower() == "hoaks":
+            st.error("🚫 Kategori Prediksi: HOAKS")
         else:
-            st.markdown(f'<div class="result-fakta">✅ Prediksi: <strong>{prediction}</strong></div>', unsafe_allow_html=True)
+            st.success("✅ Kategori Prediksi: FAKTA")
